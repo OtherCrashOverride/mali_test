@@ -323,6 +323,7 @@ int main()
 	bool isRunning = true;
 	int frames = 0;
 	float totalTime = 0;
+	int totalFrames = 0;
 
 	sw.Start();
 
@@ -330,6 +331,46 @@ int main()
 	{
 		isRunning = window->ProcessMessages();
 
+		// Update
+		for (int y = 0; y < 512; ++y)
+		{
+			for (int x = 0; x < 512; ++x)
+			{
+				unsigned char r = 0;
+				unsigned char g = 0;
+				unsigned char b = 0;
+				unsigned char l = x >> 1;
+				unsigned char offset = totalFrames % 256;
+
+				if (y < 128)
+				{
+					r = 255 - l;
+					r -= offset;
+				}
+				else if (y < 256)
+				{
+					g = l;
+					g -= offset;
+				}
+				else if (y < 384)
+				{
+					b = 255 - l;
+					b -= offset;
+				}
+				else
+				{
+					r = l;
+					g = l;
+					b = l;
+
+					r -= offset;
+					g -= offset;
+					b -= offset;
+				}
+
+				ptr[y * 512 + x] = r << 24 | g << 16 | b << 8 | 0xff;
+			}
+		}
 
 		// Render
 		glClear(GL_COLOR_BUFFER_BIT |
@@ -362,6 +403,8 @@ int main()
 
 		eglSwapBuffers(window->EglDisplay(), window->Surface());
 		Egl::CheckError();
+
+		++totalFrames;
 
 
 		// Measure FPS
