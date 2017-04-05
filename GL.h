@@ -70,7 +70,10 @@ class OpenGLException : public Exception
 
 
 public:
-	OpenGLException(int errorCode);
+	OpenGLException(int errorCode)
+		: Exception(GetErrorString(errorCode).c_str())
+	{
+	}
 };
 
 
@@ -81,13 +84,11 @@ public:
 
 	static void CheckError()
 	{
-#ifdef DEBUG
 		int error = glGetError();
 		if (error != GL_NO_ERROR)
 		{
 			throw OpenGLException(error);
 		}
-#endif
 	}
 };
 
