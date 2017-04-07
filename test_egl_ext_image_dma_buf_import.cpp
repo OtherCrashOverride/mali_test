@@ -10,6 +10,12 @@
 #include <drm/drm_fourcc.h>
 #include <sys/mman.h>
 
+// libdri2 is not aware of C++
+extern "C"
+{
+#include <X11/extensions/dri2.h>
+}
+
 #define EGL_EGLEXT_PROTOTYPES 1
 #include <EGL/eglext.h>
 #include <GLES2/gl2ext.h>
@@ -88,8 +94,22 @@ int OpenDRM()
 	return fd;
 }
 
-int CreateBuffer(int fd)
+int CreateBuffer(int fd, Display* dpy)
 {
+	// Obtain DRM authorization
+	drm_magic_t magic;
+	if (drmGetMagic(fd, &magic))
+	{
+		throw Exception("drmGetMagic failed");
+	}
+
+	Window root = RootWindow(dpy, DefaultScreen(dpy));
+	if (!DRI2Authenticate(dpy, root, magic))
+	{
+		throw Exception("DRI2Authenticate failed");
+	}
+
+
 	// Create dumb buffer
 	drm_mode_create_dumb buffer = { 0 };
 	buffer.width = 512;
@@ -101,8 +121,8 @@ int CreateBuffer(int fd)
 	{
 		throw Exception("DRM_IOCTL_MODE_CREATE_DUMB failed.");		
 	}
-
 	
+
 	// Get the dmabuf for the buffer
 	drm_prime_handle prime = { 0 };
 	prime.handle = buffer.handle;
@@ -114,61 +134,30 @@ int CreateBuffer(int fd)
 		throw Exception("DRM_IOCTL_PRIME_HANDLE_TO_FD failed.");
 	}
 	
+
 	return prime.fd;
 }
 
 int main()
 {
+	Stopwatch sw;
+	std::shared_ptr<X11Window> window = std::make_shared<X11Window>();
+
+	// ---------
+
 	int fd = OpenDRM();
-	int dmafd = CreateBuffer(fd);
+	int dmafd = CreateBuffer(fd, window->X11Display());
 
 	
-	// Create test pattern
+	// Map the buffer to userspace
 	void* frame = mmap(NULL, 512 * 512 * 4, PROT_READ | PROT_WRITE, MAP_SHARED, dmafd, 0);
 	if (frame == MAP_FAILED)
 	{
 		throw Exception("mmap failed.");
 	}
 
-	unsigned int* ptr = (unsigned int*)frame;
-	for (int y = 0; y < 512; ++y)
-	{
-		for (int x = 0; x < 512; ++x)
-		{
-			unsigned char r = 0;
-			unsigned char g = 0;
-			unsigned char b = 0;
-			unsigned char l = x >> 1;
-
-			if (y < 128)
-			{
-				r = 255 - l;
-			}
-			else if (y < 256)
-			{
-				g = l;
-			}
-			else if (y < 384)
-			{
-				b = 255 - l;
-			}
-			else
-			{
-				r = l;
-				g = l;
-				b = l;
-			}
-
-			ptr[y * 512 + x] = r << 24 | g << 16 | b << 8 | 0xff;
-		}
-	}
-
 	//  -------
 
-	Stopwatch sw;
-	WindowSPTR window = std::make_shared<X11Window>();
-
-	// ---------
 
 	// EGL_EXT_image_dma_buf_import
 	EGLint img_attrs[] = {
@@ -331,7 +320,10 @@ int main()
 	{
 		isRunning = window->ProcessMessages();
 
+
 		// Update
+		unsigned int* ptr = (unsigned int*)frame;
+
 		for (int y = 0; y < 512; ++y)
 		{
 			for (int x = 0; x < 512; ++x)
@@ -372,10 +364,12 @@ int main()
 			}
 		}
 
+
 		// Render
 		glClear(GL_COLOR_BUFFER_BIT |
 				GL_DEPTH_BUFFER_BIT |
 				GL_STENCIL_BUFFER_BIT);
+
 
 		// Quad
 		{
@@ -401,6 +395,7 @@ int main()
 		}
 
 
+		// Swap buffers (display)
 		eglSwapBuffers(window->EglDisplay(), window->Surface());
 		Egl::CheckError();
 

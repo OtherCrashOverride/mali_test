@@ -61,6 +61,10 @@ class X11Window : public WindowBase
 	//void FindEglConfig(EGLConfig* eglConfigOut, int* xVisualOut);
 
 public:
+	Display* X11Display() const
+	{
+		return display;
+	}
 
 	virtual EGLDisplay EglDisplay() const override
 	{
