@@ -396,8 +396,7 @@ int main()
 
 
 		// Swap buffers (display)
-		eglSwapBuffers(window->EglDisplay(), window->Surface());
-		Egl::CheckError();
+		window->SwapBuffers();
 
 		++totalFrames;
 

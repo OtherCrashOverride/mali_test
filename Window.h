@@ -43,7 +43,7 @@ public:
 
 	virtual void WaitForMessage() = 0;
 	virtual bool ProcessMessages() = 0;
-
+	virtual void SwapBuffers() = 0;
 };
 
 typedef std::shared_ptr<WindowBase> WindowSPTR;

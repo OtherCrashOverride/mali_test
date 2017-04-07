@@ -179,16 +179,6 @@ X11Window::X11Window()
 	{
 		Egl::CheckError();
 	}
-
-	// experimental workaround for wrong sized gl surface
-	//glViewport(0, 0, width, height);
-
-
-	//success = eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-	//if (success != EGL_TRUE)
-	//{
-	//	Egl::CheckError();
-	//}
 }
 
 X11Window::~X11Window()
@@ -250,6 +240,12 @@ bool X11Window::ProcessMessages()
 	}
 
 	return run;
+}
+
+void X11Window::SwapBuffers()
+{
+	eglSwapBuffers(EglDisplay(), Surface());
+	Egl::CheckError();
 }
 
 void X11Window::HideMouse()
