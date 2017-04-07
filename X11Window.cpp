@@ -230,7 +230,8 @@ bool X11Window::ProcessMessages()
 				&yy,
 				&child);
 
-			//SetVideoAxis(xx, yy, xConfig->width, xConfig->height);
+			glViewport(0, 0, xConfig->width, xConfig->height);
+
 			break;
 		}
 
