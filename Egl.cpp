@@ -110,6 +110,9 @@ EGLConfig Egl::FindConfig(EGLDisplay eglDisplay, int redBits, int greenBits, int
 		eglGetConfigAttrib(eglDisplay, configs[i], EGL_DEPTH_SIZE, &configDepthSize);
 		eglGetConfigAttrib(eglDisplay, configs[i], EGL_STENCIL_SIZE, &configStencilSize);
 
+		//printf("Egl::FindConfig: index=%d, red=%d, green=%d, blue=%d, alpha=%d\n",
+		//	i, configRedSize, configGreenSize, configBlueSize, configAlphaSize);
+
 		if (configRedSize == redBits &&
 			configBlueSize == blueBits &&
 			configGreenSize == greenBits &&
