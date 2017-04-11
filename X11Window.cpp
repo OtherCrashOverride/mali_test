@@ -41,6 +41,7 @@ X11Window::X11Window()
 	eglDisplay = Egl::Intialize((NativeDisplayType)display);
 
 	EGLConfig eglConfig = Egl::FindConfig(eglDisplay, 8, 8, 8, 8, 24, 8);
+	//EGLConfig eglConfig = Egl::FindConfig(eglDisplay, 8, 8, 8, 0, 24, 8);
 	if (eglConfig == 0)
 		throw Exception("Compatible EGL config not found.");
 
@@ -125,28 +126,7 @@ X11Window::X11Window()
 	XSetWMProtocols(display, xwin, &wm_delete_window, 1);
 
 
-#if 0
-	// Fullscreen
-	Atom wm_state = XInternAtom(display, "_NET_WM_STATE", 0);
-	Atom fullscreen = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", 0);
 
-	XClientMessageEvent xcmev = { 0 };
-	xcmev.type = ClientMessage;
-	xcmev.window = xwin;
-	xcmev.message_type = wm_state;
-	xcmev.format = 32;
-	xcmev.data.l[0] = 1;
-	xcmev.data.l[1] = fullscreen;
-
-	XSendEvent(display,
-		root,
-		0,
-		(SubstructureRedirectMask | SubstructureNotifyMask),
-		(XEvent*)&xcmev);
-
-
-	HideMouse();
-#endif
 
 
 	EGLint windowAttr[] = {
@@ -271,4 +251,29 @@ void X11Window::HideMouse()
 void X11Window::UnHideMouse()
 {
 	XUndefineCursor(display, xwin);
+}
+
+void X11Window::SetFullscreen(bool value)
+{
+	// Fullscreen
+	Atom wm_state = XInternAtom(display, "_NET_WM_STATE", 0);
+	Atom fullscreen = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", 0);
+
+	XClientMessageEvent xcmev = { 0 };
+	xcmev.type = ClientMessage;
+	xcmev.window = xwin;
+	xcmev.message_type = wm_state;
+	xcmev.format = 32;
+	xcmev.data.l[0] = value ? 1 : 0;
+	xcmev.data.l[1] = fullscreen;
+
+	XSendEvent(display,
+		root,
+		0,
+		(SubstructureRedirectMask | SubstructureNotifyMask),
+		(XEvent*)&xcmev);
+
+
+	//HideMouse();
+
 }

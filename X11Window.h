@@ -93,4 +93,5 @@ public:
 
 	void HideMouse();
 	void UnHideMouse();
+	void SetFullscreen(bool value);
 };
