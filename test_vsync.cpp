@@ -53,6 +53,8 @@ int main()
 
 
 		// Wait for VSYNC
+		glFinish();
+
 		drmVBlank vbl =
 		{
 			.request =
