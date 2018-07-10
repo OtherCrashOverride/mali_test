@@ -37,6 +37,16 @@
 #define MAX_MODES 1000
 #define MAX_SCREENS 10
 
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <gbm.h>
+
+int fd;
+struct gbm_device* gbm;
+
+
 /* These are X visual types, so if you're running eglinfo under
  * something not X, they probably don't make sense. */
 static const char *vnames[] = { "SG", "GS", "SC", "PC", "TC", "DC" };
@@ -193,11 +203,26 @@ PrintExtensions(EGLDisplay d)
       printf("\n");
 }
 
+
+void SetupGbm()
+{
+	fd = open("/dev/dri/card0", O_RDWR);
+	if (fd < 0)	abort();
+
+	printf("fd=%d\n", fd);
+
+	gbm = gbm_create_device(fd);
+	if (!gbm) abort();
+	printf("gbm = %p\n", gbm);
+}
+
 int
 main(int argc, char *argv[])
 {
+	SetupGbm();
+
    int maj, min;
-   EGLDisplay d = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+   EGLDisplay d = eglGetDisplay(gbm);
    
    if (d == EGL_NO_DISPLAY) {
      printf("The display is not being 'gotten' ERROR: %x\n",eglGetError());
