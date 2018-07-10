@@ -25,8 +25,9 @@
 #include <cstring>
 #include <string>
 
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
+#include <gbm.h>
+//#include <X11/Xlib.h>
+//#include <X11/Xutil.h>
 
 #include <EGL/egl.h>
 
@@ -44,13 +45,17 @@ class X11Window : public WindowBase
 	const int DEFAULT_HEIGHT = 720;
 	const char* WINDOW_TITLE = "X11Window";
 
-	Display* display = nullptr;
+	int fd;
+	struct gbm_device* gbm;
+	struct gbm_surface* gbm_surface;
+
+//Display* display = nullptr;
 	int width;
 	int height;
-	XVisualInfo* visInfoArray = nullptr;
-	Window root = 0;
-	Window xwin = 0;
-	Atom wm_delete_window;
+	//XVisualInfo* visInfoArray = nullptr;
+	//Window root = 0;
+	//Window xwin = 0;
+	//Atom wm_delete_window;
 	//int video_fd = -1;
 	EGLDisplay eglDisplay;
 	EGLSurface surface;
@@ -61,10 +66,10 @@ class X11Window : public WindowBase
 	//void FindEglConfig(EGLConfig* eglConfigOut, int* xVisualOut);
 
 public:
-	Display* X11Display() const
+	/*Display* X11Display() const
 	{
 		return display;
-	}
+	}*/
 
 	virtual EGLDisplay EglDisplay() const override
 	{

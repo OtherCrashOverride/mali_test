@@ -96,19 +96,7 @@ int OpenDRM()
 
 int CreateBuffer(int fd, Display* dpy)
 {
-	// Obtain DRM authorization
-	drm_magic_t magic;
-	if (drmGetMagic(fd, &magic))
-	{
-		throw Exception("drmGetMagic failed");
-	}
-
-	Window root = RootWindow(dpy, DefaultScreen(dpy));
-	if (!DRI2Authenticate(dpy, root, magic))
-	{
-		throw Exception("DRI2Authenticate failed");
-	}
-
+	drmSetMaster(fd);
 
 	// Create dumb buffer
 	drm_mode_create_dumb buffer = { 0 };
@@ -146,7 +134,7 @@ int main()
 	// ---------
 
 	int fd = OpenDRM();
-	int dmafd = CreateBuffer(fd, window->X11Display());
+	int dmafd = CreateBuffer(fd, 0/*window->X11Display()*/);
 
 	
 	// Map the buffer to userspace

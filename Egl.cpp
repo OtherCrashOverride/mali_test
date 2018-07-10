@@ -16,7 +16,7 @@
 
 #include "Egl.h"
 
-
+#include <gbm.h>
 
 void Egl::CheckError()
 {
@@ -96,32 +96,22 @@ EGLConfig Egl::FindConfig(EGLDisplay eglDisplay, int redBits, int greenBits, int
 
 	for (int i = 0; i < num_configs; ++i)
 	{
-		EGLint configRedSize;
-		EGLint configGreenSize;
-		EGLint configBlueSize;
-		EGLint configAlphaSize;
-		EGLint configDepthSize;
-		EGLint configStencilSize;
+		EGLint gbm_format;
 
-		eglGetConfigAttrib(eglDisplay, configs[i], EGL_RED_SIZE, &configRedSize);
-		eglGetConfigAttrib(eglDisplay, configs[i], EGL_GREEN_SIZE, &configGreenSize);
-		eglGetConfigAttrib(eglDisplay, configs[i], EGL_BLUE_SIZE, &configBlueSize);
-		eglGetConfigAttrib(eglDisplay, configs[i], EGL_ALPHA_SIZE, &configAlphaSize);
-		eglGetConfigAttrib(eglDisplay, configs[i], EGL_DEPTH_SIZE, &configDepthSize);
-		eglGetConfigAttrib(eglDisplay, configs[i], EGL_STENCIL_SIZE, &configStencilSize);
+        if (!eglGetConfigAttrib(eglDisplay, configs[i], EGL_NATIVE_VISUAL_ID, &gbm_format))
+		{
+			abort();
+        }
 
-		//printf("Egl::FindConfig: index=%d, red=%d, green=%d, blue=%d, alpha=%d\n",
-		//	i, configRedSize, configGreenSize, configBlueSize, configAlphaSize);
-
-		if (configRedSize == redBits &&
-			configBlueSize == blueBits &&
-			configGreenSize == greenBits &&
-			configAlphaSize == alphaBits &&
-			configDepthSize == depthBits &&
-			configStencilSize == stencilBits)
+        if (gbm_format == GBM_FORMAT_ARGB8888)
 		{
 			match = configs[i];
+			printf("EGL config match found.\n");
 			break;
+		}
+		else
+		{
+			printf("skipping EGL_NATIVE_VISUAL_ID = 0x%x (%c, %c, %c, %c)\n", gbm_format, (gbm_format >> 24) & 0xff, (gbm_format >> 16) & 0xff, (gbm_format >> 8) & 0xff, (gbm_format >> 0) & 0xff);
 		}
 	}
 
