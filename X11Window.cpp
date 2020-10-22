@@ -19,122 +19,59 @@
 #include "Egl.h"
 #include "GL.h"
 
+#include <linux/fb.h>
+
+
+typedef struct fbdev_window
+{
+	unsigned short width;
+	unsigned short height;
+} fbdev_window;
+
+static fbdev_window fbwin;;
 
 X11Window::X11Window()
 	: WindowBase()
 {
-	XInitThreads();
+	// Open the framebuffer to determine its properties
+	int fd_fb0 = open("/dev/fb0", O_RDWR);
+	printf("file handle: %x\n", fd_fb0);
 
-
-	display = XOpenDisplay(nullptr);
-	if (display == nullptr)
+	fb_var_screeninfo info;
+	int ret = ioctl(fd_fb0, FBIOGET_VSCREENINFO, &info);
+	if (ret < 0)
 	{
-		throw Exception("XOpenDisplay failed.");
+		printf("FBIOGET_VSCREENINFO failed.\n");
+		exit(1);
 	}
 
-	width = XDisplayWidth(display, 0);
-	height = XDisplayHeight(display, 0);
-	printf("X11Window: width=%d, height=%d\n", width, height);
+	close(fd_fb0);
 
+	int width = info.xres;
+	int height = info.yres;
+	int bpp = info.bits_per_pixel;
+	int dataLen = width * height * (bpp / 8);
+
+	printf("screen info: width=%d, height=%d, bpp=%d\n", width, height, bpp);
+
+
+	// Set the EGL window size
+	fbwin.width = width;
+	fbwin.height = height;
 
 	// Egl
-	eglDisplay = Egl::Intialize((NativeDisplayType)display);
+	eglDisplay = Egl::Intialize((NativeDisplayType)EGL_DEFAULT_DISPLAY);
 
-	EGLConfig eglConfig = Egl::FindConfig(eglDisplay, 8, 8, 8, 8, 24, 8);
-	//EGLConfig eglConfig = Egl::FindConfig(eglDisplay, 8, 8, 8, 0, 24, 8);
+	EGLConfig eglConfig = Egl::FindConfig(eglDisplay, 8, 8, 8, 8, 0, 0);
 	if (eglConfig == 0)
 		throw Exception("Compatible EGL config not found.");
-
-
-	// Get the native visual id associated with the config
-	int xVisual;
-	eglGetConfigAttrib(eglDisplay, eglConfig, EGL_NATIVE_VISUAL_ID, &xVisual);
-
-
-	// Window
-	root = XRootWindow(display, XDefaultScreen(display));
-
-
-	XVisualInfo visTemplate;
-	visTemplate.visualid = xVisual;
-	//visTemplate.depth = 32;	// Alpha required
-
-
-	int num_visuals;
-	visInfoArray = XGetVisualInfo(display,
-		VisualIDMask, //VisualDepthMask,
-		&visTemplate,
-		&num_visuals);
-
-	if (num_visuals < 1 || visInfoArray == nullptr)
-	{
-		throw Exception("XGetVisualInfo failed.");
-	}
-
-	XVisualInfo visInfo = visInfoArray[0];
-
-
-	XSetWindowAttributes attr = { 0 };
-	attr.background_pixel = 0;
-	attr.border_pixel = 0;
-	attr.colormap = XCreateColormap(display,
-		root,
-		visInfo.visual,
-		AllocNone);
-	attr.event_mask = (StructureNotifyMask | ExposureMask | KeyPressMask | KeyReleaseMask | PointerMotionMask | ButtonPressMask | ButtonReleaseMask);
-
-	unsigned long mask = (CWBackPixel | CWBorderPixel | CWColormap | CWEventMask);
-
-
-	xwin = XCreateWindow(display,
-		root,
-		0,
-		0,
-		DEFAULT_WIDTH, //width,
-		DEFAULT_HEIGHT, //height,
-		0,
-		visInfo.depth,
-		InputOutput,
-		visInfo.visual,
-		mask,
-		&attr);
-
-	if (xwin == 0)
-		throw Exception("XCreateWindow failed.");
-
-	printf("X11Window: xwin = %lu\n", xwin);
-
-
-	//XWMHints hints = { 0 };
-	//XSizeHints* hints = XAllocSizeHints();
-	//hints.input = true;
-	//hints.flags = InputHint;
-
-	//XSetWMHints(display, xwin, &hints);
-
-
-	// Set the window name
-	XStoreName(display, xwin, WINDOW_TITLE);
-
-	// Show the window
-	XMapRaised(display, xwin);
-
-
-
-	// Register to be notified when window is closed
-	wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", 0);
-	XSetWMProtocols(display, xwin, &wm_delete_window, 1);
-
-
-
 
 
 	EGLint windowAttr[] = {
 		EGL_RENDER_BUFFER, EGL_BACK_BUFFER,
 		EGL_NONE };
-
-	surface = eglCreateWindowSurface(eglDisplay, eglConfig, (NativeWindowType)xwin, windowAttr);
-
+	
+	surface = eglCreateWindowSurface(eglDisplay, eglConfig, (NativeWindowType)&fbwin, windowAttr);
 	if (surface == EGL_NO_SURFACE)
 	{
 		Egl::CheckError();
@@ -163,61 +100,16 @@ X11Window::X11Window()
 
 X11Window::~X11Window()
 {
-	XDestroyWindow(display, xwin);
-	XFree(visInfoArray);
-	XCloseDisplay(display);
 }
 
 
 void X11Window::WaitForMessage()
 {
-	XEvent xev;
-	XPeekEvent(display, &xev);
 }
 
 bool X11Window::ProcessMessages()
 {
 	bool run = true;
-
-	// Use XPending to prevent XNextEvent from blocking
-	while (XPending(display) != 0)
-	{
-		XEvent xev;
-		XNextEvent(display, &xev);
-
-		switch (xev.type)
-		{
-		case ConfigureNotify:
-		{
-			XConfigureEvent* xConfig = (XConfigureEvent*)&xev;
-
-			int xx;
-			int yy;
-			Window child;
-			XTranslateCoordinates(display, xwin, root,
-				0, 0,
-				&xx,
-				&yy,
-				&child);
-
-			glViewport(0, 0, xConfig->width, xConfig->height);
-
-			break;
-		}
-
-		case ClientMessage:
-		{
-			XClientMessageEvent* xclient = (XClientMessageEvent*)&xev;
-
-			if (xclient->data.l[0] == (long)wm_delete_window)
-			{
-				printf("X11Window: Window closed.\n");
-				run = false;
-			}
-		}
-		break;
-		}
-	}
 
 	return run;
 }
@@ -230,50 +122,12 @@ void X11Window::SwapBuffers()
 
 void X11Window::HideMouse()
 {
-	static char bitmap[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
-	Pixmap pixmap = XCreateBitmapFromData(display, xwin, bitmap, 8, 8);
-
-	XColor black = { 0 };
-	Cursor cursor = XCreatePixmapCursor(display,
-		pixmap,
-		pixmap,
-		&black,
-		&black,
-		0,
-		0);
-
-	XDefineCursor(display, xwin, cursor);
-
-	XFreeCursor(display, cursor);
-	XFreePixmap(display, pixmap);
 }
 
 void X11Window::UnHideMouse()
 {
-	XUndefineCursor(display, xwin);
 }
 
 void X11Window::SetFullscreen(bool value)
 {
-	// Fullscreen
-	Atom wm_state = XInternAtom(display, "_NET_WM_STATE", 0);
-	Atom fullscreen = XInternAtom(display, "_NET_WM_STATE_FULLSCREEN", 0);
-
-	XClientMessageEvent xcmev = { 0 };
-	xcmev.type = ClientMessage;
-	xcmev.window = xwin;
-	xcmev.message_type = wm_state;
-	xcmev.format = 32;
-	xcmev.data.l[0] = value ? 1 : 0;
-	xcmev.data.l[1] = fullscreen;
-
-	XSendEvent(display,
-		root,
-		0,
-		(SubstructureRedirectMask | SubstructureNotifyMask),
-		(XEvent*)&xcmev);
-
-
-	//HideMouse();
-
 }

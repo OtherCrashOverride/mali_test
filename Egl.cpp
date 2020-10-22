@@ -77,20 +77,22 @@ EGLConfig Egl::FindConfig(EGLDisplay eglDisplay, int redBits, int greenBits, int
 
 
 	int num_configs;
-	EGLBoolean success = eglChooseConfig(eglDisplay, configAttributes, NULL, 0, &num_configs);
-	if (success != EGL_TRUE)
-	{
-		Egl::CheckError();
-	}
-
+	// EGLBoolean success = eglChooseConfig(eglDisplay, configAttributes, NULL, 0, &num_configs);
+	// if (success != EGL_TRUE)
+	// {
+	// 	Egl::CheckError();
+	// }
+	EGLBoolean success;
+	num_configs = 25;
 
 	EGLConfig* configs = new EGLConfig[num_configs];
-	success = eglChooseConfig(eglDisplay, configAttributes, configs, num_configs, &num_configs);
-	if (success != EGL_TRUE)
-	{
-		Egl::CheckError();
-	}
-
+	// success = eglChooseConfig(eglDisplay, configAttributes, configs, num_configs, &num_configs);
+	// if (success != EGL_TRUE)
+	// {
+	// 	Egl::CheckError();
+	// }
+	success = eglGetConfigs(eglDisplay, configs, num_configs, &num_configs);
+	Egl::CheckError();
 
 	EGLConfig match = 0;
 
