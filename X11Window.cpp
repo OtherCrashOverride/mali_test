@@ -71,7 +71,7 @@ X11Window::X11Window()
 		EGL_RENDER_BUFFER, EGL_BACK_BUFFER,
 		EGL_NONE };
 	
-	surface = eglCreateWindowSurface(eglDisplay, eglConfig, (NativeWindowType)&fbwin, windowAttr);
+	surface = eglCreateWindowSurface(eglDisplay, eglConfig, (NativeWindowType)nullptr, windowAttr);
 	if (surface == EGL_NO_SURFACE)
 	{
 		Egl::CheckError();

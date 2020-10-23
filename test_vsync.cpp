@@ -20,6 +20,7 @@ int main()
 	std::shared_ptr<X11Window> window = std::make_shared<X11Window>();
 	window->SetFullscreen(true);
 
+	eglSwapInterval(window->EglDisplay(), 1);
 
 	sw.Start();
 
